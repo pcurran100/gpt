@@ -2,12 +2,27 @@ import React, { useState } from 'react';
 import { FiMenu, FiShare, FiCopy, FiThumbsUp, FiThumbsDown, FiRefreshCw, FiSearch, FiPaperclip } from 'react-icons/fi';
 import ChatMessage from './ChatMessage';
 
-const ChatArea = ({ isSidebarOpen, setIsSidebarOpen }) => {
+const ChatArea = ({ isSidebarOpen, setIsSidebarOpen, currentChat }) => {
   const [inputValue, setInputValue] = useState('');
   
-  // Sample conversation messages
-  const messages = [
-    {
+  // Sample content for new chats
+  const welcomeMessage = {
+    role: 'assistant',
+    content: (
+      <div className="text-center">
+        <h2 className="text-2xl font-medium mb-4">What can I help with?</h2>
+      </div>
+    )
+  };
+
+  // Get messages for the current chat or show welcome message for new chats
+  const messages = currentChat.messages.length > 0 
+    ? currentChat.messages 
+    : [welcomeMessage];
+
+  // New chat sample messages (only if it's the initial chat with color palette content)
+  if (currentChat.id === 1 && currentChat.title === 'Color Palette Breakdown' && messages.length === 1 && messages[0] === welcomeMessage) {
+    messages[0] = {
       role: 'assistant',
       content: (
         <div>
@@ -43,8 +58,8 @@ const ChatArea = ({ isSidebarOpen, setIsSidebarOpen }) => {
           </div>
         </div>
       )
-    }
-  ];
+    };
+  }
 
   return (
     <div className="flex-1 flex flex-col bg-pure-white relative overflow-hidden">
@@ -57,7 +72,7 @@ const ChatArea = ({ isSidebarOpen, setIsSidebarOpen }) => {
           <FiMenu className="text-dark-espresso" />
         </button>
         <div className="flex-1 text-center">
-          <span className="font-medium text-dark-espresso">Custom Chat Interface 1.0</span>
+          <span className="font-medium text-dark-espresso">{currentChat.title}</span>
         </div>
         <button className="flex items-center gap-2 px-3 py-1.5 border border-soft-gray rounded-md text-dark-espresso hover:bg-soft-gray">
           <FiShare size={16} />
@@ -72,21 +87,23 @@ const ChatArea = ({ isSidebarOpen, setIsSidebarOpen }) => {
         ))}
       </div>
 
-      {/* Message Actions */}
-      <div className="absolute bottom-24 left-0 right-0 flex justify-center space-x-2 p-2">
-        <button className="p-2 rounded-md hover:bg-soft-gray text-muted-taupe">
-          <FiCopy />
-        </button>
-        <button className="p-2 rounded-md hover:bg-soft-gray text-muted-taupe">
-          <FiThumbsUp />
-        </button>
-        <button className="p-2 rounded-md hover:bg-soft-gray text-muted-taupe">
-          <FiThumbsDown />
-        </button>
-        <button className="p-2 rounded-md hover:bg-soft-gray text-muted-taupe">
-          <FiRefreshCw />
-        </button>
-      </div>
+      {/* Message Actions - Only show if there are messages */}
+      {messages.length > 0 && messages[0] !== welcomeMessage && (
+        <div className="absolute bottom-24 left-0 right-0 flex justify-center space-x-2 p-2">
+          <button className="p-2 rounded-md hover:bg-soft-gray text-muted-taupe">
+            <FiCopy />
+          </button>
+          <button className="p-2 rounded-md hover:bg-soft-gray text-muted-taupe">
+            <FiThumbsUp />
+          </button>
+          <button className="p-2 rounded-md hover:bg-soft-gray text-muted-taupe">
+            <FiThumbsDown />
+          </button>
+          <button className="p-2 rounded-md hover:bg-soft-gray text-muted-taupe">
+            <FiRefreshCw />
+          </button>
+        </div>
+      )}
 
       {/* Input Area */}
       <div className="absolute bottom-0 left-0 right-0 p-4 bg-pure-white border-t border-soft-gray">
@@ -109,7 +126,7 @@ const ChatArea = ({ isSidebarOpen, setIsSidebarOpen }) => {
           </div>
         </div>
         <div className="text-center mt-2 text-xs text-muted-taupe">
-          Chat interface can make mistakes. Check important info.
+          ChatGPT can make mistakes. Check important info.
         </div>
       </div>
     </div>

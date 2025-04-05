@@ -1,31 +1,18 @@
 import React from 'react';
-import { FiPlus, FiFolder, FiCalendar, FiClock } from 'react-icons/fi';
+import { FiPlus, FiFolder, FiCalendar, FiClock, FiMessageSquare } from 'react-icons/fi';
 
-const Sidebar = ({ isOpen, setIsOpen }) => {
-  // Sample navigation items
-  const navItems = [
-    { name: 'ChatGPT', icon: <FiPlus /> },
-    { name: 'Sora', icon: <FiPlus /> },
-    { name: 'Monday', icon: <FiPlus /> },
-    { name: 'Ireland Budget 2025', icon: <FiPlus /> },
-    { name: 'Explore GPTs', icon: <FiPlus /> },
-  ];
-
+const Sidebar = ({ isOpen, setIsOpen, chats, currentChatId, setCurrentChatId, createNewChat }) => {
   const projects = [
     { name: 'Commercial Energy Storage', icon: <FiFolder /> },
   ];
 
   const todayItems = [
-    { name: 'Color Palette Breakdown', icon: <FiCalendar /> },
-    { name: 'Tech Stack for ChatGPT Clone', icon: <FiCalendar /> },
-    { name: 'SAS Data Step Basics', icon: <FiCalendar /> },
-    { name: 'SAS workspace error 해결', icon: <FiCalendar /> },
+    { name: 'Tailwind PostCSS Plugin Fix', icon: <FiCalendar /> },
+    { name: 'GitHub Credential Keychain Access', icon: <FiCalendar /> },
   ];
 
   const previousItems = [
     { name: 'String to number formula', icon: <FiClock /> },
-    { name: 'Chrome extension messaging', icon: <FiClock /> },
-    { name: 'Firestore User Data Structure', icon: <FiClock /> },
   ];
 
   if (!isOpen) return null;
@@ -34,24 +21,30 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     <div className="w-72 bg-deep-plum text-pure-white flex flex-col h-full overflow-hidden transition-all">
       {/* New Chat Button */}
       <div className="p-3">
-        <button className="w-full flex items-center gap-3 rounded-md border border-muted-taupe/30 px-3 py-2 transition-colors hover:bg-muted-taupe/10">
+        <button 
+          className="w-full flex items-center gap-3 rounded-md border border-muted-taupe/30 px-3 py-2 transition-colors hover:bg-muted-taupe/10"
+          onClick={createNewChat}
+        >
           <FiPlus />
           <span>New chat</span>
         </button>
       </div>
 
-      {/* Navigation Items */}
+      {/* Chat List */}
       <div className="overflow-y-auto flex-1">
         <div className="mb-5">
-          {navItems.map((item, index) => (
+          {chats.map((chat) => (
             <div 
-              key={index} 
-              className="flex items-center gap-3 px-3 py-2 hover:bg-muted-taupe/10 cursor-pointer"
+              key={chat.id} 
+              className={`flex items-center gap-3 px-3 py-2 hover:bg-muted-taupe/10 cursor-pointer ${
+                chat.id === currentChatId ? 'bg-muted-taupe/20' : ''
+              }`}
+              onClick={() => setCurrentChatId(chat.id)}
             >
               <div className="w-5 h-5 rounded-full bg-warm-beige flex items-center justify-center text-deep-plum">
-                {item.icon}
+                <FiMessageSquare />
               </div>
-              <span>{item.name}</span>
+              <span>{chat.title}</span>
             </div>
           ))}
         </div>
