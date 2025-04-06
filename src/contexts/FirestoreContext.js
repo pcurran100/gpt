@@ -158,6 +158,39 @@ export const FirestoreProvider = ({ children }) => {
     }
   };
   
+  // Update a conversation (e.g., change title)
+  const updateConversation = async (conversationId, conversationData) => {
+    if (!currentUser || !currentFolder) return null;
+    
+    try {
+      await firestoreService.updateConversation(
+        currentUser.uid,
+        currentFolder.id,
+        conversationId,
+        conversationData
+      );
+      
+      // Refresh conversations to get the updated data
+      await loadConversations(currentFolder.id);
+      
+      // If this is the current conversation, update it
+      if (currentConversation && currentConversation.id === conversationId) {
+        const updatedConversation = await firestoreService.getConversation(
+          currentUser.uid,
+          currentFolder.id,
+          conversationId
+        );
+        setCurrentConversation(updatedConversation);
+      }
+      
+      return true;
+    } catch (err) {
+      console.error('Error updating conversation:', err);
+      setError('Failed to update conversation. Please try again.');
+      return null;
+    }
+  };
+  
   // Add a new message to the current conversation
   const addNewMessage = async (messageData) => {
     if (!currentUser || !currentFolder || !currentConversation) return null;
@@ -180,7 +213,7 @@ export const FirestoreProvider = ({ children }) => {
         // Upload each file
         const uploadPromises = messageData.files.map(file => 
           storageService.uploadFile(
-            file, 
+            file.file, // Extract the actual File object
             currentUser.uid, 
             currentFolder.id, 
             currentConversation.id, 
@@ -301,6 +334,7 @@ export const FirestoreProvider = ({ children }) => {
     loadMessages,
     createNewFolder,
     createNewConversation,
+    updateConversation,
     addNewMessage,
     selectFolder,
     selectConversation,

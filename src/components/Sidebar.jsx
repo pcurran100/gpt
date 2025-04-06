@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
-import { FiPlus, FiMessageSquare, FiTrash2, FiEdit2, FiChevronDown, FiChevronRight, FiFolderPlus } from 'react-icons/fi';
+import React, { useState, useRef } from 'react';
+import { FiPlus, FiMessageSquare, FiTrash2, FiEdit2, FiChevronDown, FiChevronRight, FiFolderPlus, FiMoreVertical, FiX } from 'react-icons/fi';
 import { useFirestore } from '../contexts/FirestoreContext';
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
-  const [newChatName, setNewChatName] = useState('');
-  const [isShowingNewChatInput, setIsShowingNewChatInput] = useState(false);
-  const [isProjectsExpanded, setIsProjectsExpanded] = useState(true);
   const [isShowingNewFolderInput, setIsShowingNewFolderInput] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
+  const [isProjectsExpanded, setIsProjectsExpanded] = useState(true);
+  const [editingConversation, setEditingConversation] = useState(null);
+  const [editingName, setEditingName] = useState('');
+  const [menuOpen, setMenuOpen] = useState(null); // Track which conversation's menu is open
+  
+  const menuRef = useRef(null);
   
   const { 
     folders, 
@@ -19,17 +22,38 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     selectFolder,
     selectConversation,
     deleteFolder,
-    deleteConversation 
+    deleteConversation,
+    updateConversation
   } = useFirestore();
   
-  // Handle creating a new chat
-  const handleCreateNewChat = async (e) => {
-    e.preventDefault();
-    if (!newChatName.trim()) return;
+  // Close menu when clicking outside
+  React.useEffect(() => {
+    function handleClickOutside(event) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setMenuOpen(null);
+      }
+    }
     
-    await createNewConversation(newChatName);
-    setNewChatName('');
-    setIsShowingNewChatInput(false);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+  
+  // Handle creating a new chat immediately
+  const handleCreateNewChat = async () => {
+    // Default title for new chat
+    const title = 'New chat';
+    
+    try {
+      const conversationRef = await createNewConversation(title);
+      // Select the new conversation
+      if (conversationRef) {
+        selectConversation(conversationRef.id);
+      }
+    } catch (error) {
+      console.error('Error creating new chat:', error);
+    }
   };
   
   // Handle creating a new folder
@@ -40,6 +64,29 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     await createNewFolder(newFolderName);
     setNewFolderName('');
     setIsShowingNewFolderInput(false);
+  };
+  
+  // Start editing a conversation name
+  const handleEditConversation = (conversation) => {
+    setEditingConversation(conversation.id);
+    setEditingName(conversation.title);
+    setMenuOpen(null);
+  };
+  
+  // Save the edited conversation name
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    if (!editingName.trim()) return;
+    
+    try {
+      if (currentFolder && editingConversation) {
+        await updateConversation(editingConversation, { title: editingName });
+        setEditingConversation(null);
+        setEditingName('');
+      }
+    } catch (error) {
+      console.error('Error updating conversation name:', error);
+    }
   };
   
   // Group conversations by date
@@ -78,7 +125,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     // Return only non-empty groups
     return Object.entries(groups)
       .filter(([_, convos]) => convos.length > 0)
-      .map(([label, convos]) => ({ label, conversations: convos }));
+      .map(([label, conversations]) => ({ label, conversations }));
   };
   
   const conversationGroups = groupConversationsByDate();
@@ -94,62 +141,33 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
   if (!isOpen) return null;
   
   return (
-    <aside className="w-64 bg-soft-gray border-r border-soft-gray h-screen overflow-y-auto flex-shrink-0">
+    <aside className="w-64 bg-deep-plum text-pure-white flex flex-col h-screen overflow-y-auto flex-shrink-0">
       {/* Sidebar Header */}
-      <div className="p-4 border-b border-soft-gray">
+      <div className="p-4 border-b border-soft-gray/20">
         <button 
-          onClick={() => setIsShowingNewChatInput(true)}
-          className="w-full flex items-center justify-center gap-2 bg-deep-plum text-pure-white py-2 px-4 rounded-md hover:bg-opacity-90 transition-colors"
+          onClick={handleCreateNewChat}
+          className="w-full flex items-center justify-center gap-2 border border-muted-taupe/30 text-pure-white py-2 px-4 rounded-md hover:bg-muted-taupe/10 transition-colors"
         >
           <FiPlus />
           <span>New chat</span>
         </button>
-        
-        {/* New Chat Input */}
-        {isShowingNewChatInput && (
-          <form onSubmit={handleCreateNewChat} className="mt-4 flex flex-col gap-2">
-            <input
-              type="text"
-              value={newChatName}
-              onChange={(e) => setNewChatName(e.target.value)}
-              placeholder="Chat name"
-              className="w-full p-2 border border-soft-gray rounded-md"
-              autoFocus
-            />
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                className="flex-1 bg-deep-plum text-pure-white p-2 rounded-md hover:bg-opacity-90"
-              >
-                Create
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsShowingNewChatInput(false)}
-                className="flex-1 bg-soft-gray border border-soft-gray p-2 rounded-md"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        )}
       </div>
       
       {/* Folders and Conversations */}
-      <div className="p-2">
+      <div className="p-2 flex-1 overflow-y-auto">
         {/* Folders Section */}
         <div className="mb-4">
           <div className="flex items-center justify-between p-2">
             <button 
               onClick={() => setIsProjectsExpanded(!isProjectsExpanded)}
-              className="flex items-center gap-2 text-dark-espresso font-medium"
+              className="flex items-center gap-2 text-muted-taupe font-medium"
             >
               {isProjectsExpanded ? <FiChevronDown /> : <FiChevronRight />}
               <span>Folders</span>
             </button>
             <button 
               onClick={() => setIsShowingNewFolderInput(true)}
-              className="p-1 hover:bg-gray-200 rounded-md"
+              className="p-1 hover:bg-muted-taupe/10 rounded-md text-muted-taupe"
               aria-label="Add folder"
             >
               <FiFolderPlus size={16} />
@@ -164,20 +182,20 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                 value={newFolderName}
                 onChange={(e) => setNewFolderName(e.target.value)}
                 placeholder="Folder name"
-                className="w-full p-2 border border-soft-gray rounded-md"
+                className="w-full p-2 border border-muted-taupe/30 bg-deep-plum text-pure-white rounded-md"
                 autoFocus
               />
               <div className="flex gap-2">
                 <button
                   type="submit"
-                  className="flex-1 bg-deep-plum text-pure-white p-2 rounded-md hover:bg-opacity-90 text-sm"
+                  className="flex-1 bg-muted-taupe/20 text-pure-white p-2 rounded-md hover:bg-muted-taupe/30 text-sm"
                 >
                   Create
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsShowingNewFolderInput(false)}
-                  className="flex-1 bg-soft-gray border border-soft-gray p-2 rounded-md text-sm"
+                  className="flex-1 border border-muted-taupe/30 p-2 rounded-md text-sm"
                 >
                   Cancel
                 </button>
@@ -192,8 +210,8 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                 <div 
                   key={folder.id}
                   className={`
-                    flex items-center justify-between p-2 rounded-md cursor-pointer
-                    ${currentFolder && folder.id === currentFolder.id ? 'bg-gray-300' : 'hover:bg-gray-200'}
+                    flex items-center justify-between p-2 rounded-md cursor-pointer group
+                    ${currentFolder && folder.id === currentFolder.id ? 'bg-muted-taupe/20' : 'hover:bg-muted-taupe/10'}
                   `}
                   onClick={() => selectFolder(folder.id)}
                 >
@@ -203,7 +221,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                       e.stopPropagation();
                       deleteFolder(folder.id);
                     }}
-                    className="p-1 hover:bg-gray-300 rounded-md opacity-0 group-hover:opacity-100"
+                    className="p-1 hover:bg-muted-taupe/20 rounded-md opacity-0 group-hover:opacity-100"
                     aria-label="Delete folder"
                   >
                     <FiTrash2 size={14} />
@@ -217,48 +235,101 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         {/* Conversations in current folder */}
         {currentFolder && (
           <div>
-            <h3 className="p-2 font-medium">{currentFolder.name}</h3>
+            <h3 className="px-2 py-1 text-xs font-medium text-muted-taupe uppercase tracking-wider">{currentFolder.name}</h3>
             
             {conversationGroups.map((group) => (
-              <div key={group.label} className="mb-2">
+              <div key={group.label} className="mb-4">
                 <div className="px-2 py-1 text-xs text-muted-taupe font-medium">
                   {group.label}
                 </div>
                 <div className="space-y-1">
                   {group.conversations.map((convo) => (
-                    <div 
-                      key={convo.id}
-                      className={`
-                        flex items-center gap-2 p-2 rounded-md cursor-pointer group
-                        ${currentConversation && convo.id === currentConversation.id ? 'bg-gray-300' : 'hover:bg-gray-200'}
-                      `}
-                      onClick={() => selectConversation(convo.id)}
-                    >
-                      <FiMessageSquare size={16} className="flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <div className="truncate">{convo.title}</div>
-                        <div className="text-xs text-muted-taupe">
-                          {formatDate(convo.createdAt)}
+                    <div key={convo.id}>
+                      {editingConversation === convo.id ? (
+                        // Edit mode
+                        <form onSubmit={handleSaveEdit} className="px-2 py-1 flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={editingName}
+                            onChange={(e) => setEditingName(e.target.value)}
+                            className="flex-1 p-1 bg-deep-plum border border-muted-taupe/30 rounded-md text-pure-white"
+                            autoFocus
+                          />
+                          <button 
+                            type="submit"
+                            className="p-1 hover:bg-muted-taupe/20 rounded-md"
+                          >
+                            <FiEdit2 size={14} />
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={() => {
+                              setEditingConversation(null);
+                              setEditingName('');
+                            }}
+                            className="p-1 hover:bg-muted-taupe/20 rounded-md"
+                          >
+                            <FiX size={14} />
+                          </button>
+                        </form>
+                      ) : (
+                        // Display mode
+                        <div 
+                          className={`
+                            flex items-center gap-2 px-2 py-2 rounded-md cursor-pointer group relative
+                            ${currentConversation && convo.id === currentConversation.id ? 'bg-muted-taupe/20' : 'hover:bg-muted-taupe/10'}
+                          `}
+                          onClick={() => selectConversation(convo.id)}
+                        >
+                          <FiMessageSquare size={16} className="flex-shrink-0 text-muted-taupe" />
+                          <div className="flex-1 min-w-0">
+                            <div className="truncate">{convo.title}</div>
+                            <div className="text-xs text-muted-taupe">
+                              {formatDate(convo.createdAt)}
+                            </div>
+                          </div>
+                          <button 
+                            className="p-1 hover:bg-muted-taupe/20 rounded-md opacity-0 group-hover:opacity-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setMenuOpen(menuOpen === convo.id ? null : convo.id);
+                            }}
+                            aria-label="More options"
+                          >
+                            <FiMoreVertical size={14} />
+                          </button>
+                          
+                          {/* Dropdown menu */}
+                          {menuOpen === convo.id && (
+                            <div 
+                              ref={menuRef}
+                              className="absolute right-0 top-full mt-1 w-36 bg-deep-plum border border-muted-taupe/30 shadow-lg rounded-md z-10"
+                            >
+                              <button 
+                                className="flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-muted-taupe/20"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditConversation(convo);
+                                }}
+                              >
+                                <FiEdit2 size={14} />
+                                <span>Rename</span>
+                              </button>
+                              <button 
+                                className="flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-muted-taupe/20 text-crimson-red"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteConversation(convo.id);
+                                  setMenuOpen(null);
+                                }}
+                              >
+                                <FiTrash2 size={14} />
+                                <span>Delete</span>
+                              </button>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                      <div className="flex items-center opacity-0 group-hover:opacity-100">
-                        <button 
-                          className="p-1 hover:bg-gray-300 rounded-md"
-                          aria-label="Edit conversation"
-                        >
-                          <FiEdit2 size={14} />
-                        </button>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteConversation(convo.id);
-                          }}
-                          className="p-1 hover:bg-gray-300 rounded-md"
-                          aria-label="Delete conversation"
-                        >
-                          <FiTrash2 size={14} />
-                        </button>
-                      </div>
+                      )}
                     </div>
                   ))}
                 </div>

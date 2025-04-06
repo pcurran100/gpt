@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FiMenu, FiShare, FiSearch, FiPaperclip, FiSettings, FiLogOut, FiSmile, FiX } from 'react-icons/fi';
+import { FiMenu, FiShare, FiSearch, FiPaperclip, FiSettings, FiLogOut, FiSmile, FiX, FiArrowUp } from 'react-icons/fi';
 import ChatMessage from './ChatMessage';
 import FileAttachment from './FileAttachment';
 import { useFirestore } from '../contexts/FirestoreContext';
@@ -76,6 +76,15 @@ const ChatArea = ({ isSidebarOpen, setIsSidebarOpen }) => {
       }, 1000);
     } catch (error) {
       console.error("Error sending message:", error);
+    }
+  };
+
+  // Handle key press in textarea
+  const handleKeyDown = (e) => {
+    // Submit on Enter without Shift key
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e);
     }
   };
 
@@ -259,8 +268,9 @@ const ChatArea = ({ isSidebarOpen, setIsSidebarOpen }) => {
           <textarea
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={handleKeyDown}
             placeholder="Ask anything"
-            className="w-full p-4 pr-14 rounded-lg border border-soft-gray focus:outline-none focus:ring-2 focus:ring-deep-plum focus:border-transparent resize-none"
+            className="w-full p-4 pr-24 rounded-lg border border-soft-gray focus:outline-none focus:ring-2 focus:ring-deep-plum focus:border-transparent resize-none"
             rows={1}
             style={{ minHeight: '56px' }}
           />
@@ -279,8 +289,15 @@ const ChatArea = ({ isSidebarOpen, setIsSidebarOpen }) => {
             >
               <FiPaperclip />
             </button>
-            <button type="button" className="p-2 text-muted-taupe hover:text-deep-plum ml-1">
+            <button type="button" className="p-2 text-muted-taupe hover:text-deep-plum">
               <FiSearch />
+            </button>
+            <button 
+              type="submit" 
+              className="ml-1 p-2 bg-deep-plum text-white rounded-full hover:bg-deep-plum/90"
+              aria-label="Send message"
+            >
+              <FiArrowUp size={18} />
             </button>
           </div>
         </form>
