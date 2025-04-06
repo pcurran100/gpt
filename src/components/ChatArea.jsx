@@ -16,13 +16,13 @@ const ChatArea = ({ isSidebarOpen, setIsSidebarOpen, currentChat }) => {
   };
 
   // Get messages for the current chat or show welcome message for new chats
-  const messages = currentChat.messages.length > 0 
+  const messages = currentChat.messages && currentChat.messages.length > 0 
     ? currentChat.messages 
     : [welcomeMessage];
 
-  // New chat sample messages (only if it's the initial chat with color palette content)
-  if (currentChat.id === 1 && currentChat.title === 'Color Palette Breakdown' && messages.length === 1 && messages[0] === welcomeMessage) {
-    messages[0] = {
+  // Sample messages for specific predefined chats
+  const sampleContentByTitle = {
+    'Color Palette Breakdown': {
       role: 'assistant',
       content: (
         <div>
@@ -58,8 +58,38 @@ const ChatArea = ({ isSidebarOpen, setIsSidebarOpen, currentChat }) => {
           </div>
         </div>
       )
-    };
+    },
+    'UI Design Discussion': {
+      role: 'assistant',
+      content: (
+        <div>
+          <h2 className="text-xl font-medium mb-4">UI Design Discussion</h2>
+          <p className="mb-4">Here are some key UI design principles to consider:</p>
+          <ul className="list-disc ml-6 space-y-2">
+            <li>Focus on user needs and goals</li>
+            <li>Create clear visual hierarchy</li>
+            <li>Use consistent design patterns</li>
+            <li>Ensure accessibility for all users</li>
+            <li>Design for mobile-first when appropriate</li>
+          </ul>
+        </div>
+      )
+    }
+  };
+
+  // If it's a predefined chat with sample content
+  if (messages.length === 1 && messages[0] === welcomeMessage && sampleContentByTitle[currentChat.title]) {
+    messages[0] = sampleContentByTitle[currentChat.title];
   }
+
+  // Handle form submission
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!inputValue.trim()) return;
+    
+    // Form submission logic would go here
+    setInputValue('');
+  };
 
   return (
     <div className="flex-1 flex flex-col bg-pure-white relative overflow-hidden">
@@ -107,7 +137,7 @@ const ChatArea = ({ isSidebarOpen, setIsSidebarOpen, currentChat }) => {
 
       {/* Input Area */}
       <div className="absolute bottom-0 left-0 right-0 p-4 bg-pure-white border-t border-soft-gray">
-        <div className="relative max-w-3xl mx-auto">
+        <form onSubmit={handleSubmit} className="relative max-w-3xl mx-auto">
           <textarea
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
@@ -117,14 +147,14 @@ const ChatArea = ({ isSidebarOpen, setIsSidebarOpen, currentChat }) => {
             style={{ minHeight: '56px' }}
           />
           <div className="absolute bottom-3 right-2 flex items-center">
-            <button className="p-2 text-muted-taupe hover:text-deep-plum">
+            <button type="button" className="p-2 text-muted-taupe hover:text-deep-plum">
               <FiPaperclip />
             </button>
-            <button className="p-2 text-muted-taupe hover:text-deep-plum ml-1">
+            <button type="button" className="p-2 text-muted-taupe hover:text-deep-plum ml-1">
               <FiSearch />
             </button>
           </div>
-        </div>
+        </form>
         <div className="text-center mt-2 text-xs text-muted-taupe">
           ChatGPT can make mistakes. Check important info.
         </div>
