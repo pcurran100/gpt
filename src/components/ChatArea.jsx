@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FiMenu, FiShare, FiCopy, FiThumbsUp, FiThumbsDown, FiRefreshCw, FiSearch, FiPaperclip, FiUser, FiSettings, FiLogOut, FiSmile } from 'react-icons/fi';
+import { FiMenu, FiShare, FiSearch, FiPaperclip, FiSettings, FiLogOut, FiSmile } from 'react-icons/fi';
 import ChatMessage from './ChatMessage';
 
 const ChatArea = ({ isSidebarOpen, setIsSidebarOpen, currentChat, user, onLogout }) => {
@@ -144,6 +144,10 @@ const ChatArea = ({ isSidebarOpen, setIsSidebarOpen, currentChat, user, onLogout
     messages[0] = sampleContentByTitle[currentChat.title];
   }
 
+  // Find the last assistant message index
+  const lastAssistantIndex = [...messages].reverse().findIndex(m => m.role === 'assistant');
+  const lastAssistantPosition = lastAssistantIndex >= 0 ? messages.length - 1 - lastAssistantIndex : -1;
+
   // Handle form submission
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -233,27 +237,13 @@ const ChatArea = ({ isSidebarOpen, setIsSidebarOpen, currentChat, user, onLogout
       {/* Main Chat Content */}
       <div className="flex-1 overflow-y-auto p-4 pb-32">
         {messages.map((message, index) => (
-          <ChatMessage key={index} message={message} />
+          <ChatMessage 
+            key={index} 
+            message={message} 
+            isLatest={index === lastAssistantPosition}
+          />
         ))}
       </div>
-
-      {/* Message Actions - Only show if there are messages */}
-      {messages.length > 0 && messages[0] !== welcomeMessage && (
-        <div className="absolute bottom-24 left-0 right-0 flex justify-center space-x-2 p-2">
-          <button className="p-2 rounded-md hover:bg-soft-gray text-muted-taupe">
-            <FiCopy />
-          </button>
-          <button className="p-2 rounded-md hover:bg-soft-gray text-muted-taupe">
-            <FiThumbsUp />
-          </button>
-          <button className="p-2 rounded-md hover:bg-soft-gray text-muted-taupe">
-            <FiThumbsDown />
-          </button>
-          <button className="p-2 rounded-md hover:bg-soft-gray text-muted-taupe">
-            <FiRefreshCw />
-          </button>
-        </div>
-      )}
 
       {/* Input Area */}
       <div className="absolute bottom-0 left-0 right-0 p-4 bg-pure-white border-t border-soft-gray">
