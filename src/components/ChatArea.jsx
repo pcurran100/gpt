@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FiMenu, FiShare, FiCopy, FiThumbsUp, FiThumbsDown, FiRefreshCw, FiSearch, FiPaperclip, FiUser, FiSettings, FiLogOut, FiSmile, FiChevronDown } from 'react-icons/fi';
+import { FiMenu, FiShare, FiCopy, FiThumbsUp, FiThumbsDown, FiRefreshCw, FiSearch, FiPaperclip, FiUser, FiSettings, FiLogOut, FiSmile } from 'react-icons/fi';
 import ChatMessage from './ChatMessage';
 
 const ChatArea = ({ isSidebarOpen, setIsSidebarOpen, currentChat, user, onLogout }) => {
@@ -153,6 +153,12 @@ const ChatArea = ({ isSidebarOpen, setIsSidebarOpen, currentChat, user, onLogout
     setInputValue('');
   };
 
+  // Get initials for user avatar if no photoURL is available
+  const getUserInitials = () => {
+    if (!user?.name) return 'U';
+    return user.name.split(' ').map(n => n[0]).join('').toUpperCase();
+  };
+
   return (
     <div className="flex-1 flex flex-col bg-pure-white relative overflow-hidden">
       {/* Header */}
@@ -178,7 +184,11 @@ const ChatArea = ({ isSidebarOpen, setIsSidebarOpen, currentChat, user, onLogout
               className="flex items-center justify-center w-9 h-9 rounded-full bg-deep-plum text-pure-white ml-2"
               onClick={() => setShowUserDropdown(!showUserDropdown)}
             >
-              <FiUser size={18} />
+              {user?.photoURL ? (
+                <img src={user.photoURL} alt={user.name} className="w-full h-full rounded-full object-cover" />
+              ) : (
+                <span>{getUserInitials()}</span>
+              )}
             </button>
             
             {/* User Dropdown Menu */}
