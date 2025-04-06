@@ -3,6 +3,7 @@ import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
 import LoginPage from './components/LoginPage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { FirestoreProvider } from './contexts/FirestoreContext';
 import './App.css';
 
 // Main application component
@@ -113,7 +114,9 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <FirestoreProvider>
+        <AppContent />
+      </FirestoreProvider>
     </AuthProvider>
   );
 }

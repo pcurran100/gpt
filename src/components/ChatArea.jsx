@@ -1,11 +1,24 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FiMenu, FiShare, FiSearch, FiPaperclip, FiSettings, FiLogOut, FiSmile } from 'react-icons/fi';
+import { FiMenu, FiShare, FiSearch, FiPaperclip, FiSettings, FiLogOut, FiSmile, FiX } from 'react-icons/fi';
 import ChatMessage from './ChatMessage';
+import FileAttachment from './FileAttachment';
+import { useFirestore } from '../contexts/FirestoreContext';
+import { useAuth } from '../contexts/AuthContext';
 
-const ChatArea = ({ isSidebarOpen, setIsSidebarOpen, currentChat, user, onLogout }) => {
+const ChatArea = ({ isSidebarOpen, setIsSidebarOpen }) => {
   const [inputValue, setInputValue] = useState('');
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const fileInputRef = useRef(null);
   const dropdownRef = useRef(null);
+  
+  const { currentUser, logout } = useAuth();
+  const { 
+    currentFolder,
+    currentConversation,
+    messages,
+    addNewMessage
+  } = useFirestore();
   
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -22,146 +35,84 @@ const ChatArea = ({ isSidebarOpen, setIsSidebarOpen, currentChat, user, onLogout
   }, []);
 
   // Handle logout
-  const handleLogout = (e) => {
+  const handleLogout = async (e) => {
     e.preventDefault();
     setShowUserDropdown(false);
-    onLogout();
-  };
-
-  // Sample content for new chats
-  const welcomeMessage = {
-    role: 'assistant',
-    content: (
-      <div className="text-center">
-        <h2 className="text-2xl font-medium mb-4">What can I help with?</h2>
-      </div>
-    )
-  };
-
-  // Sample messages for a conversation
-  const sampleConversation = [
-    {
-      role: 'user',
-      content: 'How can I improve my website\'s accessibility?'
-    },
-    {
-      role: 'assistant',
-      content: (
-        <div>
-          <p className="mb-3">Here are some key ways to improve your website's accessibility:</p>
-          <ol className="list-decimal ml-6 space-y-2">
-            <li>Use proper semantic HTML elements</li>
-            <li>Ensure sufficient color contrast</li>
-            <li>Add alt text to all images</li>
-            <li>Make your site keyboard navigable</li>
-            <li>Use ARIA attributes where appropriate</li>
-            <li>Create a logical tab order</li>
-          </ol>
-          <p className="mt-3">Would you like me to elaborate on any of these points?</p>
-        </div>
-      )
-    },
-    {
-      role: 'user',
-      content: 'Can you tell me more about semantic HTML elements?'
-    },
-    {
-      role: 'assistant',
-      content: (
-        <div>
-          <p className="mb-3">Semantic HTML elements clearly describe their meaning to both browsers and developers. Using them properly improves accessibility, SEO, and code readability.</p>
-          <p className="mb-3">Key semantic elements include:</p>
-          <ul className="list-disc ml-6 space-y-2">
-            <li><code>&lt;header&gt;</code> - For introductory content or navigation links</li>
-            <li><code>&lt;nav&gt;</code> - For navigation menus</li>
-            <li><code>&lt;main&gt;</code> - For the main content of the page</li>
-            <li><code>&lt;article&gt;</code> - For self-contained compositions</li>
-            <li><code>&lt;section&gt;</code> - For thematic grouping of content</li>
-            <li><code>&lt;aside&gt;</code> - For content tangentially related to the main content</li>
-            <li><code>&lt;footer&gt;</code> - For footer information</li>
-          </ul>
-          <p className="mt-3">Instead of using generic <code>&lt;div&gt;</code> elements for everything, using these semantic elements helps screen readers and other assistive technologies better understand your content's structure.</p>
-        </div>
-      )
-    }
-  ];
-
-  // Get messages for the current chat or show welcome message for new chats
-  let messages = currentChat.messages && currentChat.messages.length > 0 
-    ? currentChat.messages 
-    : [welcomeMessage];
-  
-  // Special case for "UI Design Discussion" - show a sample conversation
-  if (currentChat.title === 'UI Design Discussion') {
-    messages = sampleConversation;
-  }
-
-  // Sample messages for specific predefined chats
-  const sampleContentByTitle = {
-    'Color Palette Breakdown': {
-      role: 'assistant',
-      content: (
-        <div>
-          <h2 className="text-xl font-medium mb-4">Color Palette Breakdown</h2>
-          <div className="mb-6">
-            <h3 className="font-medium mb-2">Primary Colors</h3>
-            <ul className="list-disc ml-6 space-y-2">
-              <li>Deep Plum (#6D214F)</li>
-              <li>Warm Beige (#E3C4A8)</li>
-            </ul>
-          </div>
-          <div className="mb-6">
-            <h3 className="font-medium mb-2">Neutral Base</h3>
-            <ul className="list-disc ml-6 space-y-2">
-              <li>Pure White (#FFFFFF)</li>
-              <li>Soft Warm Gray (#F4F1ED)</li>
-            </ul>
-          </div>
-          <div className="mb-6">
-            <h3 className="font-medium mb-2">Accents</h3>
-            <ul className="list-disc ml-6 space-y-2">
-              <li>Olive Green (#3D9970)</li>
-              <li>Burnt Orange (#D35400)</li>
-              <li>Crimson Red (#C0392B)</li>
-            </ul>
-          </div>
-          <div className="mb-6">
-            <h3 className="font-medium mb-2">Typography & Contrast</h3>
-            <ul className="list-disc ml-6 space-y-2">
-              <li>Dark Espresso (#3B2C35)</li>
-              <li>Muted Taupe (#8E8275)</li>
-            </ul>
-          </div>
-        </div>
-      )
+    try {
+      await logout();
+    } catch (error) {
+      console.error("Failed to log out", error);
     }
   };
-
-  // If it's a predefined chat with sample content (except UI Design Discussion which has conversation)
-  if (messages.length === 1 && messages[0] === welcomeMessage && 
-      sampleContentByTitle[currentChat.title] && 
-      currentChat.title !== 'UI Design Discussion') {
-    messages[0] = sampleContentByTitle[currentChat.title];
-  }
-
-  // Find the last assistant message index
-  const lastAssistantIndex = [...messages].reverse().findIndex(m => m.role === 'assistant');
-  const lastAssistantPosition = lastAssistantIndex >= 0 ? messages.length - 1 - lastAssistantIndex : -1;
 
   // Handle form submission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!inputValue.trim()) return;
+    if (!inputValue.trim() && selectedFiles.length === 0) return;
     
-    // Form submission logic would go here
-    setInputValue('');
+    try {
+      // Add user message
+      const userMessage = {
+        role: 'user',
+        content: inputValue,
+        files: selectedFiles
+      };
+      
+      await addNewMessage(userMessage);
+      
+      // Clear input and selected files
+      setInputValue('');
+      setSelectedFiles([]);
+      
+      // Here you would typically trigger an API call to get an AI response
+      // For now, we'll simulate it with a mock response after a delay
+      setTimeout(async () => {
+        const assistantMessage = {
+          role: 'assistant',
+          content: "I've processed your message. Here's a response that demonstrates the chat interface capabilities."
+        };
+        
+        await addNewMessage(assistantMessage);
+      }, 1000);
+    } catch (error) {
+      console.error("Error sending message:", error);
+    }
+  };
+
+  // Handle file selection
+  const handleFileSelect = (e) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files).map(file => ({
+        file,
+        fileName: file.name,
+        contentType: file.type,
+        size: file.size,
+        // Create object URL for preview
+        downloadUrl: URL.createObjectURL(file)
+      }));
+      
+      setSelectedFiles([...selectedFiles, ...newFiles]);
+    }
+  };
+
+  // Remove a selected file
+  const removeFile = (index) => {
+    // Revoke the object URL to prevent memory leaks
+    if (selectedFiles[index].downloadUrl && selectedFiles[index].downloadUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(selectedFiles[index].downloadUrl);
+    }
+    setSelectedFiles(selectedFiles.filter((_, i) => i !== index));
   };
 
   // Get initials for user avatar if no photoURL is available
   const getUserInitials = () => {
-    if (!user?.name) return 'U';
-    return user.name.split(' ').map(n => n[0]).join('').toUpperCase();
+    if (!currentUser?.displayName) return 'U';
+    return currentUser.displayName.split(' ').map(n => n[0]).join('').toUpperCase();
   };
+
+  // Find the last assistant message index
+  const lastAssistantIndex = [...(messages || [])].reverse().findIndex(m => m.role === 'assistant');
+  const lastAssistantPosition = lastAssistantIndex >= 0 ? messages.length - 1 - lastAssistantIndex : -1;
 
   return (
     <div className="flex-1 flex flex-col bg-pure-white relative overflow-hidden">
@@ -174,7 +125,9 @@ const ChatArea = ({ isSidebarOpen, setIsSidebarOpen, currentChat, user, onLogout
           <FiMenu className="text-dark-espresso" />
         </button>
         <div className="flex-1 text-center">
-          <span className="font-medium text-dark-espresso">{currentChat.title}</span>
+          <span className="font-medium text-dark-espresso">
+            {currentConversation?.title || 'New Conversation'}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <button className="flex items-center gap-2 px-3 py-1.5 border border-soft-gray rounded-md text-dark-espresso hover:bg-soft-gray">
@@ -188,8 +141,8 @@ const ChatArea = ({ isSidebarOpen, setIsSidebarOpen, currentChat, user, onLogout
               className="flex items-center justify-center w-9 h-9 rounded-full bg-deep-plum text-pure-white ml-2"
               onClick={() => setShowUserDropdown(!showUserDropdown)}
             >
-              {user?.photoURL ? (
-                <img src={user.photoURL} alt={user.name} className="w-full h-full rounded-full object-cover" />
+              {currentUser?.photoURL ? (
+                <img src={currentUser.photoURL} alt={currentUser.displayName} className="w-full h-full rounded-full object-cover" />
               ) : (
                 <span>{getUserInitials()}</span>
               )}
@@ -199,8 +152,8 @@ const ChatArea = ({ isSidebarOpen, setIsSidebarOpen, currentChat, user, onLogout
             {showUserDropdown && (
               <div className="absolute right-0 mt-2 w-48 bg-pure-white shadow-lg rounded-md border border-soft-gray z-20">
                 <div className="p-3 border-b border-soft-gray">
-                  <div className="font-medium">{user?.name || 'User'}</div>
-                  <div className="text-sm text-muted-taupe">{user?.email || 'user@example.com'}</div>
+                  <div className="font-medium">{currentUser?.displayName || 'User'}</div>
+                  <div className="text-sm text-muted-taupe">{currentUser?.email || 'user@example.com'}</div>
                 </div>
                 <ul>
                   <li className="hover:bg-soft-gray">
@@ -236,17 +189,72 @@ const ChatArea = ({ isSidebarOpen, setIsSidebarOpen, currentChat, user, onLogout
 
       {/* Main Chat Content */}
       <div className="flex-1 overflow-y-auto p-4 pb-32">
-        {messages.map((message, index) => (
-          <ChatMessage 
-            key={index} 
-            message={message} 
-            isLatest={index === lastAssistantPosition}
-          />
-        ))}
+        {!currentConversation || messages.length === 0 ? (
+          // Welcome message for new conversations
+          <div className="h-full flex flex-col items-center justify-center text-center p-4">
+            <h2 className="text-2xl font-medium mb-4">What can I help with?</h2>
+            <p className="text-muted-taupe max-w-md mb-8">
+              Ask me anything! I can answer questions, provide information, help with tasks, and more.
+            </p>
+            <div className="grid grid-cols-2 gap-4 max-w-2xl">
+              <button 
+                onClick={() => setInputValue("How do I improve my website's accessibility?")}
+                className="bg-soft-gray p-4 rounded-lg text-left hover:bg-gray-200 transition-colors"
+              >
+                <div className="font-medium mb-1">Website Accessibility</div>
+                <div className="text-sm text-muted-taupe">Tips for making websites more accessible</div>
+              </button>
+              <button 
+                onClick={() => setInputValue("Explain the key principles of responsive design")}
+                className="bg-soft-gray p-4 rounded-lg text-left hover:bg-gray-200 transition-colors"
+              >
+                <div className="font-medium mb-1">Responsive Design</div>
+                <div className="text-sm text-muted-taupe">Learn about responsive design principles</div>
+              </button>
+              <button 
+                onClick={() => setInputValue("What's the difference between CSS Grid and Flexbox?")}
+                className="bg-soft-gray p-4 rounded-lg text-left hover:bg-gray-200 transition-colors"
+              >
+                <div className="font-medium mb-1">CSS Layout Methods</div>
+                <div className="text-sm text-muted-taupe">Compare Grid and Flexbox capabilities</div>
+              </button>
+              <button 
+                onClick={() => setInputValue("Generate a color palette for a professional portfolio website")}
+                className="bg-soft-gray p-4 rounded-lg text-left hover:bg-gray-200 transition-colors"
+              >
+                <div className="font-medium mb-1">Color Palette Ideas</div>
+                <div className="text-sm text-muted-taupe">Get color scheme suggestions</div>
+              </button>
+            </div>
+          </div>
+        ) : (
+          // Display conversation messages
+          messages.map((message, index) => (
+            <ChatMessage 
+              key={message.id || index} 
+              message={message} 
+              isLatest={index === lastAssistantPosition}
+            />
+          ))
+        )}
       </div>
 
       {/* Input Area */}
       <div className="absolute bottom-0 left-0 right-0 p-4 bg-pure-white border-t border-soft-gray">
+        {/* Selected files preview */}
+        {selectedFiles.length > 0 && (
+          <div className="max-w-3xl mx-auto mb-2 space-y-2">
+            {selectedFiles.map((file, index) => (
+              <FileAttachment 
+                key={index} 
+                file={file} 
+                onRemove={() => removeFile(index)}
+                isPreview={true}
+              />
+            ))}
+          </div>
+        )}
+        
         <form onSubmit={handleSubmit} className="relative max-w-3xl mx-auto">
           <textarea
             value={inputValue}
@@ -257,7 +265,18 @@ const ChatArea = ({ isSidebarOpen, setIsSidebarOpen, currentChat, user, onLogout
             style={{ minHeight: '56px' }}
           />
           <div className="absolute bottom-3 right-2 flex items-center">
-            <button type="button" className="p-2 text-muted-taupe hover:text-deep-plum">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileSelect}
+              className="hidden"
+              multiple
+            />
+            <button 
+              type="button" 
+              className="p-2 text-muted-taupe hover:text-deep-plum"
+              onClick={() => fileInputRef.current.click()}
+            >
               <FiPaperclip />
             </button>
             <button type="button" className="p-2 text-muted-taupe hover:text-deep-plum ml-1">
