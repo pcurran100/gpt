@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FiPlus, FiFolder } from 'react-icons/fi';
+import { FiPlus, FiFolder, FiChevronDown, FiChevronRight } from 'react-icons/fi';
 
 const Sidebar = ({ isOpen, setIsOpen, chats, currentChatId, setCurrentChatId, createNewChat, updateChatProject }) => {
   // Sample projects
@@ -9,6 +9,17 @@ const Sidebar = ({ isOpen, setIsOpen, chats, currentChatId, setCurrentChatId, cr
   
   // State to track drag operations
   const [draggedChatId, setDraggedChatId] = useState(null);
+  
+  // State to track collapsed projects
+  const [collapsedProjects, setCollapsedProjects] = useState({});
+  
+  // Toggle project collapse state
+  const toggleProjectCollapse = (projectId) => {
+    setCollapsedProjects(prev => ({
+      ...prev,
+      [projectId]: !prev[projectId]
+    }));
+  };
   
   // Function to determine the date category based on actual timestamp
   const getDateCategory = (timestamp) => {
@@ -122,8 +133,55 @@ const Sidebar = ({ isOpen, setIsOpen, chats, currentChatId, setCurrentChatId, cr
         </button>
       </div>
 
-      {/* Chat List - Organized by date categories */}
+      {/* Main Content Area */}
       <div className="overflow-y-auto flex-1">
+        {/* Projects Section - Now at the top */}
+        <div className="px-3 mb-4">
+          <h3 className="text-xs font-medium text-muted-taupe uppercase tracking-wider mb-1">
+            Projects
+          </h3>
+          {projects.map((project) => {
+            const projectChats = getProjectChats(project.id);
+            const isCollapsed = collapsedProjects[project.id];
+            
+            return (
+              <div key={project.id} className="mb-1">
+                <div 
+                  className="flex items-center px-3 py-2 hover:bg-muted-taupe/10 cursor-pointer"
+                  onDragOver={(e) => handleDragOver(e, project.id)}
+                  onDrop={(e) => handleDrop(e, project.id)}
+                >
+                  <div className="flex items-center gap-3 flex-1" onClick={() => toggleProjectCollapse(project.id)}>
+                    {isCollapsed ? <FiChevronRight size={16} /> : <FiChevronDown size={16} />}
+                    {project.icon}
+                    <span>{project.name}</span>
+                  </div>
+                </div>
+                
+                {/* Display chats under this project if not collapsed */}
+                {!isCollapsed && projectChats.length > 0 && (
+                  <div className="ml-6">
+                    {projectChats.map(chat => (
+                      <div 
+                        key={chat.id} 
+                        className={`flex items-center px-3 py-2 hover:bg-muted-taupe/10 cursor-pointer ${
+                          chat.id === currentChatId ? 'bg-muted-taupe/20' : ''
+                        }`}
+                        onClick={() => setCurrentChatId(chat.id)}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, chat.id)}
+                      >
+                        <span className="pl-2">{chat.title}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Chat List - Organized by date categories */}
         {categoryOrder.map(category => {
           const categoryChats = groupedChats[category] || [];
           if (categoryChats.length === 0) return null;
@@ -153,59 +211,6 @@ const Sidebar = ({ isOpen, setIsOpen, chats, currentChatId, setCurrentChatId, cr
             </div>
           );
         })}
-
-        {/* Projects Section */}
-        <div className="px-3 mb-4 mt-3">
-          <h3 className="text-xs font-medium text-muted-taupe uppercase tracking-wider mb-1">Projects</h3>
-          {projects.map((project) => {
-            const projectChats = getProjectChats(project.id);
-            
-            return (
-              <div key={project.id}>
-                <div 
-                  className="flex items-center gap-3 px-3 py-2 hover:bg-muted-taupe/10 cursor-pointer"
-                  onDragOver={(e) => handleDragOver(e, project.id)}
-                  onDrop={(e) => handleDrop(e, project.id)}
-                >
-                  {project.icon}
-                  <span>{project.name}</span>
-                </div>
-                
-                {/* Display chats under this project */}
-                {projectChats.length > 0 && (
-                  <div className="ml-6">
-                    {projectChats.map(chat => (
-                      <div 
-                        key={chat.id} 
-                        className={`flex items-center px-3 py-2 hover:bg-muted-taupe/10 cursor-pointer ${
-                          chat.id === currentChatId ? 'bg-muted-taupe/20' : ''
-                        }`}
-                        onClick={() => setCurrentChatId(chat.id)}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, chat.id)}
-                      >
-                        <span className="pl-2">{chat.title}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* View Plans */}
-      <div className="p-3 border-t border-muted-taupe/30">
-        <div className="flex items-center gap-3 px-3 py-2 hover:bg-muted-taupe/10 cursor-pointer">
-          <div className="w-5 h-5 rounded-full bg-warm-beige flex items-center justify-center text-deep-plum">
-            <FiPlus />
-          </div>
-          <div>
-            <div className="text-sm">View plans</div>
-            <div className="text-xs text-muted-taupe">Unlimited access, team...</div>
-          </div>
-        </div>
       </div>
     </div>
   );

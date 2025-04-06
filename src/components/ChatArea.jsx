@@ -1,10 +1,33 @@
-import React, { useState } from 'react';
-import { FiMenu, FiShare, FiCopy, FiThumbsUp, FiThumbsDown, FiRefreshCw, FiSearch, FiPaperclip } from 'react-icons/fi';
+import React, { useState, useRef, useEffect } from 'react';
+import { FiMenu, FiShare, FiCopy, FiThumbsUp, FiThumbsDown, FiRefreshCw, FiSearch, FiPaperclip, FiUser, FiSettings, FiLogOut, FiSmile, FiChevronDown } from 'react-icons/fi';
 import ChatMessage from './ChatMessage';
 
-const ChatArea = ({ isSidebarOpen, setIsSidebarOpen, currentChat }) => {
+const ChatArea = ({ isSidebarOpen, setIsSidebarOpen, currentChat, user, onLogout }) => {
   const [inputValue, setInputValue] = useState('');
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const dropdownRef = useRef(null);
   
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowUserDropdown(false);
+      }
+    }
+    
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  // Handle logout
+  const handleLogout = (e) => {
+    e.preventDefault();
+    setShowUserDropdown(false);
+    onLogout();
+  };
+
   // Sample content for new chats
   const welcomeMessage = {
     role: 'assistant',
@@ -15,10 +38,63 @@ const ChatArea = ({ isSidebarOpen, setIsSidebarOpen, currentChat }) => {
     )
   };
 
+  // Sample messages for a conversation
+  const sampleConversation = [
+    {
+      role: 'user',
+      content: 'How can I improve my website\'s accessibility?'
+    },
+    {
+      role: 'assistant',
+      content: (
+        <div>
+          <p className="mb-3">Here are some key ways to improve your website's accessibility:</p>
+          <ol className="list-decimal ml-6 space-y-2">
+            <li>Use proper semantic HTML elements</li>
+            <li>Ensure sufficient color contrast</li>
+            <li>Add alt text to all images</li>
+            <li>Make your site keyboard navigable</li>
+            <li>Use ARIA attributes where appropriate</li>
+            <li>Create a logical tab order</li>
+          </ol>
+          <p className="mt-3">Would you like me to elaborate on any of these points?</p>
+        </div>
+      )
+    },
+    {
+      role: 'user',
+      content: 'Can you tell me more about semantic HTML elements?'
+    },
+    {
+      role: 'assistant',
+      content: (
+        <div>
+          <p className="mb-3">Semantic HTML elements clearly describe their meaning to both browsers and developers. Using them properly improves accessibility, SEO, and code readability.</p>
+          <p className="mb-3">Key semantic elements include:</p>
+          <ul className="list-disc ml-6 space-y-2">
+            <li><code>&lt;header&gt;</code> - For introductory content or navigation links</li>
+            <li><code>&lt;nav&gt;</code> - For navigation menus</li>
+            <li><code>&lt;main&gt;</code> - For the main content of the page</li>
+            <li><code>&lt;article&gt;</code> - For self-contained compositions</li>
+            <li><code>&lt;section&gt;</code> - For thematic grouping of content</li>
+            <li><code>&lt;aside&gt;</code> - For content tangentially related to the main content</li>
+            <li><code>&lt;footer&gt;</code> - For footer information</li>
+          </ul>
+          <p className="mt-3">Instead of using generic <code>&lt;div&gt;</code> elements for everything, using these semantic elements helps screen readers and other assistive technologies better understand your content's structure.</p>
+        </div>
+      )
+    }
+  ];
+
   // Get messages for the current chat or show welcome message for new chats
-  const messages = currentChat.messages && currentChat.messages.length > 0 
+  let messages = currentChat.messages && currentChat.messages.length > 0 
     ? currentChat.messages 
     : [welcomeMessage];
+  
+  // Special case for "UI Design Discussion" - show a sample conversation
+  if (currentChat.title === 'UI Design Discussion') {
+    messages = sampleConversation;
+  }
 
   // Sample messages for specific predefined chats
   const sampleContentByTitle = {
@@ -58,27 +134,13 @@ const ChatArea = ({ isSidebarOpen, setIsSidebarOpen, currentChat }) => {
           </div>
         </div>
       )
-    },
-    'UI Design Discussion': {
-      role: 'assistant',
-      content: (
-        <div>
-          <h2 className="text-xl font-medium mb-4">UI Design Discussion</h2>
-          <p className="mb-4">Here are some key UI design principles to consider:</p>
-          <ul className="list-disc ml-6 space-y-2">
-            <li>Focus on user needs and goals</li>
-            <li>Create clear visual hierarchy</li>
-            <li>Use consistent design patterns</li>
-            <li>Ensure accessibility for all users</li>
-            <li>Design for mobile-first when appropriate</li>
-          </ul>
-        </div>
-      )
     }
   };
 
-  // If it's a predefined chat with sample content
-  if (messages.length === 1 && messages[0] === welcomeMessage && sampleContentByTitle[currentChat.title]) {
+  // If it's a predefined chat with sample content (except UI Design Discussion which has conversation)
+  if (messages.length === 1 && messages[0] === welcomeMessage && 
+      sampleContentByTitle[currentChat.title] && 
+      currentChat.title !== 'UI Design Discussion') {
     messages[0] = sampleContentByTitle[currentChat.title];
   }
 
@@ -104,10 +166,58 @@ const ChatArea = ({ isSidebarOpen, setIsSidebarOpen, currentChat }) => {
         <div className="flex-1 text-center">
           <span className="font-medium text-dark-espresso">{currentChat.title}</span>
         </div>
-        <button className="flex items-center gap-2 px-3 py-1.5 border border-soft-gray rounded-md text-dark-espresso hover:bg-soft-gray">
-          <FiShare size={16} />
-          <span>Share</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button className="flex items-center gap-2 px-3 py-1.5 border border-soft-gray rounded-md text-dark-espresso hover:bg-soft-gray">
+            <FiShare size={16} />
+            <span>Share</span>
+          </button>
+          
+          {/* User Account Button */}
+          <div className="relative" ref={dropdownRef}>
+            <button 
+              className="flex items-center justify-center w-9 h-9 rounded-full bg-deep-plum text-pure-white ml-2"
+              onClick={() => setShowUserDropdown(!showUserDropdown)}
+            >
+              <FiUser size={18} />
+            </button>
+            
+            {/* User Dropdown Menu */}
+            {showUserDropdown && (
+              <div className="absolute right-0 mt-2 w-48 bg-pure-white shadow-lg rounded-md border border-soft-gray z-20">
+                <div className="p-3 border-b border-soft-gray">
+                  <div className="font-medium">{user?.name || 'User'}</div>
+                  <div className="text-sm text-muted-taupe">{user?.email || 'user@example.com'}</div>
+                </div>
+                <ul>
+                  <li className="hover:bg-soft-gray">
+                    <a href="#myGPTs" className="block px-4 py-2 text-dark-espresso">
+                      <div className="flex items-center gap-2">
+                        <FiSmile size={16} />
+                        <span>My GPTs</span>
+                      </div>
+                    </a>
+                  </li>
+                  <li className="hover:bg-soft-gray">
+                    <a href="#settings" className="block px-4 py-2 text-dark-espresso">
+                      <div className="flex items-center gap-2">
+                        <FiSettings size={16} />
+                        <span>Settings</span>
+                      </div>
+                    </a>
+                  </li>
+                  <li className="hover:bg-soft-gray border-t border-soft-gray">
+                    <a href="#logout" className="block px-4 py-2 text-dark-espresso" onClick={handleLogout}>
+                      <div className="flex items-center gap-2">
+                        <FiLogOut size={16} />
+                        <span>Log out</span>
+                      </div>
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
       </header>
 
       {/* Main Chat Content */}

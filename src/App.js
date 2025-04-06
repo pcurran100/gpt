@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
+import LoginPage from './components/LoginPage';
 import './App.css';
 
 function App() {
+  // Authentication state
+  const [user, setUser] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   
   // Initialize with sample chats with various timestamps
@@ -54,6 +57,16 @@ function App() {
   
   const [currentChatId, setCurrentChatId] = useState(2); // Set the "Today" chat as current
   
+  // Handle login
+  const handleLogin = (userData) => {
+    setUser(userData);
+  };
+  
+  // Handle logout
+  const handleLogout = () => {
+    setUser(null);
+  };
+  
   // Function to create a new chat
   const createNewChat = () => {
     const newChatId = chats.length > 0 ? Math.max(...chats.map(chat => chat.id)) + 1 : 1;
@@ -75,6 +88,11 @@ function App() {
     ));
   };
   
+  // If user is not logged in, show the login page
+  if (!user) {
+    return <LoginPage onLogin={handleLogin} />;
+  }
+  
   return (
     <div className="flex h-screen bg-soft-gray">
       {/* Sidebar */}
@@ -93,6 +111,8 @@ function App() {
         isSidebarOpen={isSidebarOpen} 
         setIsSidebarOpen={setIsSidebarOpen}
         currentChat={chats.find(chat => chat.id === currentChatId) || chats[0]}
+        user={user}
+        onLogout={handleLogout}
       />
     </div>
   );
