@@ -193,12 +193,16 @@ export const FirestoreProvider = ({ children }) => {
   
   // Add a new message to the current conversation
   const addNewMessage = async (messageData) => {
-    if (!currentUser || !currentFolder || !currentConversation) return null;
+    if (!currentUser || !currentFolder || !currentConversation)
+      console.log("Missing context: ", { currentUser, currentFolder, currentConversation }); 
+    return null;
     
     try {
+      console.log("Adding new message:", messageData);
       // If the message includes files, upload them first
       let attachments = [];
       if (messageData.files && messageData.files.length > 0) {
+        console.log("Message includes files:", messageData.files);
         const messageRef = await firestoreService.addMessage(
           currentUser.uid,
           currentFolder.id,
@@ -210,6 +214,7 @@ export const FirestoreProvider = ({ children }) => {
           }
         );
         
+        console.log("Message added to Firestore, reference:", messageRef.id);
         // Upload each file
         const uploadPromises = messageData.files.map(file => 
           storageService.uploadFile(
