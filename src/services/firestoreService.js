@@ -293,19 +293,21 @@ export const createUserDocument = async (userId, userData) => {
 
     console.log('Sanitized user data:', sanitizedUserData);
 
+    // Create user document
     const userRef = doc(db, 'users', userId);
-    
-    // First create the user document
     await setDoc(userRef, sanitizedUserData);
-    console.log('Successfully created base user document');
+    console.log('Created user document');
 
-    // Then create default folder
-    const defaultFolderRef = await createFolder(userId, { 
+    // Create default folder
+    const defaultFolderData = {
       name: 'Default',
       type: 'default',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
-    });
+    };
+
+    const foldersRef = collection(db, 'users', userId, 'folders');
+    const defaultFolderRef = await addDoc(foldersRef, defaultFolderData);
     console.log('Created default folder:', defaultFolderRef.id);
 
     // Update user with default folder reference
@@ -321,7 +323,7 @@ export const createUserDocument = async (userId, userData) => {
       defaultFolderId: defaultFolderRef.id
     };
   } catch (error) {
-    console.error('Error creating user document:', error);
+    console.error('Error in createUserDocument:', error);
     throw error;
   }
 }; 
