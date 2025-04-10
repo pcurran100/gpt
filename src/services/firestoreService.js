@@ -10,9 +10,50 @@ import {
   query, 
   where, 
   orderBy,
-  serverTimestamp 
+  serverTimestamp
 } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, auth } from '../firebase.config';
+
+// Diagnostic function to check Firebase connection
+export const checkFirebaseConnection = async () => {
+  console.log('Checking Firebase connection...');
+  try {
+    if (!auth.currentUser) {
+      console.log('No authenticated user - cannot test write operations');
+      // Just test if we can access Firestore
+      const usersRef = collection(db, 'users');
+      console.log('Successfully accessed Firestore users collection');
+      return true;
+    }
+
+    console.log('Testing with authenticated user:', auth.currentUser.uid);
+    
+    // Try to access the user's document
+    const userRef = doc(db, 'users', auth.currentUser.uid);
+    const userDoc = await getDoc(userRef);
+    
+    if (!userDoc.exists()) {
+      console.log('User document does not exist, will be created during auth flow');
+    } else {
+      console.log('Successfully accessed user document');
+    }
+
+    // Try to access folders collection
+    const foldersRef = collection(db, 'users', auth.currentUser.uid, 'folders');
+    console.log('Successfully accessed folders collection');
+
+    // Try to get folders
+    const foldersSnapshot = await getDocs(foldersRef);
+    console.log('Current folders:', foldersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+
+    return true;
+  } catch (error) {
+    console.error('Failed to access Firestore:', error);
+    console.error('Error code:', error.code);
+    console.error('Error message:', error.message);
+    return false;
+  }
+};
 
 // ===== FOLDER OPERATIONS =====
 
@@ -20,12 +61,20 @@ import { db } from '../firebase';
  * Create a new folder for a user
  */
 export const createFolder = async (userId, folderData) => {
+  console.log('Creating folder:', folderData);
   const foldersRef = collection(db, 'users', userId, 'folders');
-  return await addDoc(foldersRef, {
-    ...folderData,
+  
+  // Ensure folderData has required fields
+  const sanitizedFolderData = {
+    name: folderData.name || 'Untitled Folder',
+    type: folderData.type || 'user',
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
-  });
+  };
+
+  const folderRef = await addDoc(foldersRef, sanitizedFolderData);
+  console.log('Created folder with ID:', folderRef.id);
+  return folderRef;
 };
 
 /**
@@ -231,36 +280,48 @@ export const deleteMessage = async (userId, folderId, conversationId, messageId)
  * Initialize user document in Firestore when a new user signs up
  */
 export const createUserDocument = async (userId, userData) => {
-  const userRef = doc(db, 'users', userId);
-  
-  // Check if user document already exists
-  const userDoc = await getDoc(userRef);
-  
-  if (!userDoc.exists()) {
-    // Create user document if it doesn't exist
-    await setDoc(userRef, {
-      ...userData,
+  console.log('Creating user document for:', userId);
+  try {
+    // Ensure userData has required fields and no undefined values
+    const sanitizedUserData = {
+      email: userData?.email || '',
+      displayName: userData?.displayName || '',
+      photoURL: userData?.photoURL || '',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    };
+
+    console.log('Sanitized user data:', sanitizedUserData);
+
+    const userRef = doc(db, 'users', userId);
+    
+    // First create the user document
+    await setDoc(userRef, sanitizedUserData);
+    console.log('Successfully created base user document');
+
+    // Then create default folder
+    const defaultFolderRef = await createFolder(userId, { 
+      name: 'Default',
+      type: 'default',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
-    
-    // Create a default folder for the user
-    const defaultFolderRef = await createFolder(userId, { name: 'My Conversations' });
-    
-    // Update user document with the default folder reference
+    console.log('Created default folder:', defaultFolderRef.id);
+
+    // Update user with default folder reference
     await updateDoc(userRef, {
-      defaultFolderId: defaultFolderRef.id
+      defaultFolderId: defaultFolderRef.id,
+      updatedAt: serverTimestamp()
     });
-    
+    console.log('Updated user with default folder reference');
+
     return {
       id: userId,
-      ...userData,
+      ...sanitizedUserData,
       defaultFolderId: defaultFolderRef.id
     };
+  } catch (error) {
+    console.error('Error creating user document:', error);
+    throw error;
   }
-  
-  return {
-    id: userId,
-    ...userDoc.data()
-  };
 }; 

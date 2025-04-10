@@ -8,56 +8,21 @@ import './App.css';
 
 // Main application component
 function AppContent() {
-  const { currentUser, logout } = useAuth();
+  const { currentUser, loading, error } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   
   // Initialize with sample chats with various timestamps
   const [chats, setChats] = useState([
     { 
       id: 1, 
-      title: 'Color Palette Breakdown', 
+      title: 'New Chat',
       messages: [],
-      timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // Yesterday
-      projectId: null
-    },
-    { 
-      id: 2, 
-      title: 'UI Design Discussion', 
-      messages: [],
-      timestamp: new Date(), // Today
-      projectId: null
-    },
-    { 
-      id: 3, 
-      title: 'Energy Storage Calculations', 
-      messages: [],
-      timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
-      projectId: 1 // Assigned to Commercial Energy Storage project
-    },
-    { 
-      id: 4, 
-      title: 'Weekly Meeting Notes', 
-      messages: [],
-      timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
-      projectId: null
-    },
-    { 
-      id: 5, 
-      title: 'Monthly Budget Review', 
-      messages: [],
-      timestamp: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000), // 20 days ago
-      projectId: null
-    },
-    { 
-      id: 6, 
-      title: 'Product Launch Plan', 
-      messages: [],
-      timestamp: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000), // 45 days ago
+      timestamp: new Date(),
       projectId: null
     }
   ]);
   
-  const [currentChatId, setCurrentChatId] = useState(2); // Set the "Today" chat as current
+  const [currentChatId, setCurrentChatId] = useState(1);
   
   // Function to create a new chat
   const createNewChat = () => {
@@ -66,7 +31,7 @@ function AppContent() {
       id: newChatId,
       title: 'New chat',
       messages: [],
-      timestamp: new Date(), // Set to current time - this ensures it appears at the top of Today
+      timestamp: new Date(),
       projectId: null
     };
     setChats([...chats, newChat]);
@@ -79,34 +44,56 @@ function AppContent() {
       chat.id === chatId ? { ...chat, projectId } : chat
     ));
   };
-  
-  // If user is not logged in, show the login page
+
+  // Show loading spinner only during initial auth check
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-4 text-gray-700">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if there's an error
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-100">
+        <div className="text-center text-red-600 p-4 bg-white rounded shadow">
+          <p>Error: {error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show login page if no user
   if (!currentUser) {
     return <LoginPage />;
   }
-  
+
+  // Show main app if authenticated
   return (
-    <div className="flex h-screen bg-soft-gray">
-      {/* Sidebar */}
-      <Sidebar 
-        isOpen={isSidebarOpen} 
-        setIsOpen={setIsSidebarOpen} 
-        chats={chats}
-        currentChatId={currentChatId}
-        setCurrentChatId={setCurrentChatId}
-        createNewChat={createNewChat}
-        updateChatProject={updateChatProject}
-      />
-      
-      {/* Main Chat Area */}
-      <ChatArea 
-        isSidebarOpen={isSidebarOpen} 
-        setIsSidebarOpen={setIsSidebarOpen}
-        currentChat={chats.find(chat => chat.id === currentChatId) || chats[0]}
-        user={currentUser}
-        onLogout={logout}
-      />
-    </div>
+    <FirestoreProvider>
+      <div className="flex h-screen bg-gray-100">
+        <Sidebar 
+          isOpen={isSidebarOpen} 
+          setIsOpen={setIsSidebarOpen} 
+          chats={chats}
+          currentChatId={currentChatId}
+          setCurrentChatId={setCurrentChatId}
+          createNewChat={createNewChat}
+          updateChatProject={updateChatProject}
+        />
+        <ChatArea 
+          isSidebarOpen={isSidebarOpen} 
+          setIsSidebarOpen={setIsSidebarOpen}
+          currentChat={chats.find(chat => chat.id === currentChatId) || chats[0]}
+          user={currentUser}
+        />
+      </div>
+    </FirestoreProvider>
   );
 }
 
@@ -114,9 +101,7 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <FirestoreProvider>
-        <AppContent />
-      </FirestoreProvider>
+      <AppContent />
     </AuthProvider>
   );
 }
