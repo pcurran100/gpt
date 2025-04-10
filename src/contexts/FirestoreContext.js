@@ -59,13 +59,24 @@ export const FirestoreProvider = ({ children }) => {
     
     try {
       const userFolders = await firestoreService.getUserFolders(currentUser.uid);
-      setFolders(userFolders);
       
-      // Set current folder to the first one if not already set
-      if (userFolders.length > 0 && !currentFolder) {
-        setCurrentFolder(userFolders[0]);
-        // Load conversations for this folder
-        await loadConversations(userFolders[0].id);
+      // Check if default folder exists, create if not
+      const defaultFolder = userFolders.find(f => f.name === 'Default');
+      if (!defaultFolder) {
+        await firestoreService.createFolder(currentUser.uid, { name: 'Default' });
+        const updatedFolders = await firestoreService.getUserFolders(currentUser.uid);
+        setFolders(updatedFolders);
+        setCurrentFolder(updatedFolders.find(f => f.name === 'Default'));
+      } else {
+        setFolders(userFolders);
+        if (!currentFolder) {
+          setCurrentFolder(defaultFolder);
+        }
+      }
+      
+      // Load conversations for current folder
+      if (currentFolder) {
+        await loadConversations(currentFolder.id);
       }
     } catch (err) {
       console.error('Error loading folders:', err);
@@ -139,17 +150,45 @@ export const FirestoreProvider = ({ children }) => {
   };
   
   // Create a new conversation
-  const createNewConversation = async (title) => {
-    if (!currentUser || !currentFolder) return null;
+  const createNewConversation = async (title = 'New Conversation') => {
+    if (!currentUser) {
+      console.log("No current user");
+      return null;
+    }
     
     try {
+      console.log("Creating new conversation with title:", title);
+      console.log("Current folder:", currentFolder);
+      console.log("Available folders:", folders);
+
+      // Check for default folder or create it
+      let defaultFolder = folders.find(f => f.name === 'Default');
+      if (!defaultFolder) {
+        console.log("No default folder found, creating one");
+        const defaultFolderRef = await firestoreService.createFolder(currentUser.uid, { name: 'Default' });
+        console.log("Created default folder:", defaultFolderRef);
+        // Reload folders to get the new default folder
+        await loadFolders();
+        defaultFolder = folders.find(f => f.name === 'Default');
+      }
+
+      // Use current folder or default folder
+      const folderId = currentFolder?.id || defaultFolder?.id;
+      console.log("Using folder ID:", folderId);
+
+      if (!folderId) {
+        throw new Error('Failed to get or create default folder');
+      }
+
+      console.log("Creating conversation in folder:", folderId);
       const conversationRef = await firestoreService.createConversation(
         currentUser.uid,
-        currentFolder.id,
+        folderId,
         { title, messages: [] }
       );
       
-      await loadConversations(currentFolder.id);
+      console.log("Created conversation:", conversationRef);
+      await loadConversations(folderId);
       return conversationRef;
     } catch (err) {
       console.error('Error creating conversation:', err);
@@ -193,16 +232,33 @@ export const FirestoreProvider = ({ children }) => {
   
   // Add a new message to the current conversation
   const addNewMessage = async (messageData) => {
-    if (!currentUser || !currentFolder || !currentConversation)
-      console.log("Missing context: ", { currentUser, currentFolder, currentConversation }); 
-    return null;
-    
+    if (!currentUser) {
+      console.log("Missing user context");
+      return null;
+    }
+
     try {
-      console.log("Adding new message:", messageData);
+      // If no conversation is selected, create a new one
+      if (!currentConversation) {
+        const newConversation = await createNewConversation();
+        if (!newConversation) {
+          throw new Error('Failed to create new conversation');
+        }
+        await selectConversation(newConversation.id);
+      }
+
+      // If no folder is selected, use the default folder
+      if (!currentFolder) {
+        const defaultFolder = folders.find(f => f.name === 'Default');
+        if (!defaultFolder) {
+          throw new Error('No default folder available');
+        }
+        await selectFolder(defaultFolder.id);
+      }
+
       // If the message includes files, upload them first
       let attachments = [];
       if (messageData.files && messageData.files.length > 0) {
-        console.log("Message includes files:", messageData.files);
         const messageRef = await firestoreService.addMessage(
           currentUser.uid,
           currentFolder.id,
@@ -210,15 +266,14 @@ export const FirestoreProvider = ({ children }) => {
           { 
             role: messageData.role,
             content: messageData.content,
-            attachments: [] // We'll update this after uploading files
+            attachments: []
           }
         );
         
-        console.log("Message added to Firestore, reference:", messageRef.id);
         // Upload each file
         const uploadPromises = messageData.files.map(file => 
           storageService.uploadFile(
-            file.file, // Extract the actual File object
+            file.file,
             currentUser.uid, 
             currentFolder.id, 
             currentConversation.id, 
