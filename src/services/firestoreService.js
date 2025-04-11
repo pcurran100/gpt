@@ -28,8 +28,21 @@ export const checkFirebaseConnection = async () => {
 
     console.log('Testing with authenticated user:', auth.currentUser.uid);
     
+    const testRef = collection(db, 'test-collection'); // Replace with a known collection if you have one
+    console.log('made it here');
+    try {
+      const snapshot = await getDocs(testRef).catch(error => {
+        console.error('Error inside catch block of promise rejection:', error);
+      });
+      console.log('Successfully connected to Firestore! Docs:', snapshot.docs.map(doc => doc.data()));
+    } catch (error) {
+      console.error('Failed to connect to Firestore:', error);
+    }
+
+    console.log('Passed the test');
     // Try to access the user's document
     const userRef = doc(db, 'users', auth.currentUser.uid);
+    console.log('Attempting to get document at path:', `users/${auth.currentUser.uid}`);
     const userDoc = await getDoc(userRef);
     
     if (!userDoc.exists()) {
