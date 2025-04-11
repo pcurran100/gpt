@@ -30,16 +30,6 @@ export function AuthProvider({ children }) {
       
       try {
         if (user) {
-          // Check Firebase connection first
-          console.log('Checking Firebase connection...');
-          const isConnected = await checkFirebaseConnection();
-          console.log('Firebase connection status:', isConnected);
-
-          if (!isConnected) {
-            throw new Error('Failed to connect to Firebase');
-          }
-
-          // Only proceed with user document creation if connection is successful
           console.log('Creating/updating user document...');
           await createUserDocument(user.uid, {
             email: user.email,
@@ -66,12 +56,6 @@ export function AuthProvider({ children }) {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
-      // Check Firebase connection before creating user document
-      const isConnected = await checkFirebaseConnection();
-      if (!isConnected) {
-        throw new Error('Failed to connect to Firebase');
-      }
-
       await createUserDocument(userCredential.user.uid, {
         email: userCredential.user.email,
         displayName: userCredential.user.displayName || '',

@@ -14,7 +14,7 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from '../firebase.config';
 
-// Diagnostic function to check Firebase connection
+// Diagnostic function to check Firebase connection - should no longer be used but keeping it here for reference
 export const checkFirebaseConnection = async () => {
   console.log('Checking Firebase connection...');
   try {
@@ -28,8 +28,7 @@ export const checkFirebaseConnection = async () => {
 
     console.log('Testing with authenticated user:', auth.currentUser.uid);
     
-    const testRef = collection(db, 'test'); // Replace with a known collection if you have one
-    console.log('made it here');
+    const testRef = collection(db, 'test');
     try {
       const snapshot = await getDocs(testRef).catch(error => {
         console.error('Error inside catch block of promise rejection:', error);
@@ -38,11 +37,8 @@ export const checkFirebaseConnection = async () => {
     } catch (error) {
       console.error('Failed to connect to Firestore:', error);
     }
-// getting docs in Test collection
-    console.log('Passed the test');
     // Try to access the user's document
     const userRef = doc(db, 'users', auth.currentUser.uid);
-    console.log('Attempting to get document at path:', `users/${auth.currentUser.uid}`);
     try {
       const userDoc = await getDoc(userRef);
     
